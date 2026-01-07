@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useRef, useCallback } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import axios from 'axios'
-import Pusher from 'pusher-js'
 import UserInfo from "../../components/userinfo"
 import TodayAppointments from "../../components/appointments"
 import LeadsList from "../../components/leadslist"
@@ -11,6 +10,7 @@ import './index.css'
 
 const BASE_ID = 'VNaub1YiNaMtBYsKhsol0mlNgnw'
 const TABLE_ID = 'tblt9ruu9VqM0fWo'
+const POLL_INTERVAL = 30000 // 30 seconds
 
 export default function Home() {
     const [userInfo, setUserInfo] = useState(null)
@@ -20,11 +20,10 @@ export default function Home() {
     const [leadsLoading, setLeadsLoading] = useState(false)
     const [leadsError, setLeadsError] = useState(null)
     const [selectedLead, setSelectedLead] = useState(null)
-    const [realtimeStatus, setRealtimeStatus] = useState('disconnected')
-    const pusherRef = useRef(null)
+    const [autoSyncEnabled, setAutoSyncEnabled] = useState(true)
 
-    const fetchLeads = useCallback(async () => {
-        setLeadsLoading(true)
+    const fetchLeads = useCallback(async (showLoading = true) => {
+        if (showLoading) setLeadsLoading(true)
         setLeadsError(null)
         try {
             const apiUrl = clientConfig.getApiUrl(`/api/base/records?base_id=${BASE_ID}&table_id=${TABLE_ID}&page_size=500`)
@@ -37,70 +36,19 @@ export default function Home() {
         } catch (err) {
             setLeadsError(err.message)
         }
-        setLeadsLoading(false)
+        if (showLoading) setLeadsLoading(false)
     }, [])
 
-    // Initialize Pusher for real-time updates
+    // Auto-refresh polling
     useEffect(() => {
-        const initPusher = async () => {
-            try {
-                // Get Pusher config from server
-                const configRes = await axios.get(clientConfig.getApiUrl('/api/pusher/config'))
-                if (configRes.data?.code !== 0) {
-                    console.log('[Pusher] Config not available')
-                    return
-                }
+        if (!autoSyncEnabled || !userInfo) return
 
-                const { key, cluster } = configRes.data.data
-                if (!key || key === 'YOUR_PUSHER_KEY') {
-                    console.log('[Pusher] Not configured')
-                    return
-                }
+        const interval = setInterval(() => {
+            fetchLeads(false) // Silent refresh without loading spinner
+        }, POLL_INTERVAL)
 
-                // Initialize Pusher
-                const pusher = new Pusher(key, {
-                    cluster: cluster,
-                    encrypted: true
-                })
-
-                pusherRef.current = pusher
-
-                // Subscribe to leads channel
-                const channel = pusher.subscribe('leads-channel')
-
-                channel.bind('pusher:subscription_succeeded', () => {
-                    console.log('[Pusher] Subscribed to leads-channel')
-                    setRealtimeStatus('connected')
-                })
-
-                channel.bind('record-changed', (data) => {
-                    console.log('[Pusher] Record changed event:', data)
-                    // Refresh leads when any change occurs
-                    fetchLeads()
-                })
-
-                pusher.connection.bind('connected', () => {
-                    setRealtimeStatus('connected')
-                })
-
-                pusher.connection.bind('disconnected', () => {
-                    setRealtimeStatus('disconnected')
-                })
-
-            } catch (err) {
-                console.log('[Pusher] Init error:', err.message)
-            }
-        }
-
-        initPusher()
-
-        // Cleanup on unmount
-        return () => {
-            if (pusherRef.current) {
-                pusherRef.current.disconnect()
-            }
-        }
-    }, [fetchLeads])
+        return () => clearInterval(interval)
+    }, [autoSyncEnabled, userInfo, fetchLeads])
 
     useEffect(() => {
         handleJSAPIAccess((isSuccess) => {
@@ -156,11 +104,17 @@ export default function Home() {
 
     return (
         <div className="home">
-            {/* Real-time status indicator */}
-            {realtimeStatus === 'connected' && (
-                <div className="realtime-status connected">
+            {/* Auto-sync indicator */}
+            {autoSyncEnabled && (
+                <div className="realtime-status connected" onClick={() => setAutoSyncEnabled(false)}>
                     <span className="status-dot"></span>
-                    Real-time sync active
+                    Auto-sync (30s)
+                </div>
+            )}
+            {!autoSyncEnabled && (
+                <div className="realtime-status paused" onClick={() => setAutoSyncEnabled(true)}>
+                    <span className="status-dot paused"></span>
+                    Sync paused - tap to resume
                 </div>
             )}
             <UserInfo userInfo={userInfo} />

@@ -1,7 +1,6 @@
 // Vercel Serverless API - Single catch-all handler for all API routes
 const axios = require('axios')
 const CryptoJS = require('crypto-js')
-const Pusher = require('pusher')
 
 // Configuration - Use environment variables in production
 const config = {
@@ -12,23 +11,7 @@ const config = {
     baseAppId: process.env.LARK_BASE_APP_ID || "cli_a7c6350f9778d010",
     baseAppSecret: process.env.LARK_BASE_APP_SECRET || "cMfrfWMK5vppT6zh89zzohz5jby8GiRc",
     noncestr: "njrktx6WakWFcdnQAmQ7RDFwJpABKmrb",
-    // Lark Event Encryption Key (for webhook verification)
-    encryptKey: process.env.LARK_ENCRYPT_KEY || "",
-    verificationToken: process.env.LARK_VERIFICATION_TOKEN || "",
 }
-
-// Pusher configuration for real-time updates
-const pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID || "YOUR_PUSHER_APP_ID",
-    key: process.env.PUSHER_KEY || "YOUR_PUSHER_KEY",
-    secret: process.env.PUSHER_SECRET || "YOUR_PUSHER_SECRET",
-    cluster: process.env.PUSHER_CLUSTER || "ap1",
-    useTLS: true
-})
-
-// Table IDs for event filtering
-const LEADS_TABLE_ID = 'tblt9ruu9VqM0fWo'
-const BASE_ID = 'VNaub1YiNaMtBYsKhsol0mlNgnw'
 
 // Token cache
 let tokenCache = { cs: null, csExpiry: 0, base: null, baseExpiry: 0 }
@@ -234,60 +217,6 @@ const handlers = {
             { headers: { "Authorization": "Bearer " + token } }
         )
         return res.data?.code === 0 ? okResponse(res.data.data) : failResponse(res.data?.msg)
-    },
-
-    // Lark Webhook: Receive events from Lark
-    'POST /api/webhook': async (req) => {
-        const body = req.body || {}
-        console.log('[Webhook] Received event:', JSON.stringify(body, null, 2))
-
-        // Handle URL verification challenge (required for Lark webhook setup)
-        if (body.type === 'url_verification') {
-            console.log('[Webhook] URL verification challenge')
-            return { challenge: body.challenge }
-        }
-
-        // Handle actual events
-        const event = body.event || {}
-        const header = body.header || {}
-        const eventType = header.event_type || body.type
-
-        console.log('[Webhook] Event type:', eventType)
-
-        // Handle Base record change events
-        if (eventType === 'drive.file.bitable_record_changed_v1') {
-            const tableId = event.table_id
-            const actionList = event.action_list || []
-
-            console.log('[Webhook] Base record changed, table:', tableId)
-            console.log('[Webhook] Actions:', JSON.stringify(actionList))
-
-            // Check if it's our leads table
-            if (tableId === LEADS_TABLE_ID) {
-                try {
-                    // Trigger Pusher event to notify frontend
-                    await pusher.trigger('leads-channel', 'record-changed', {
-                        table_id: tableId,
-                        actions: actionList,
-                        timestamp: Date.now()
-                    })
-                    console.log('[Webhook] Pusher event triggered for leads table')
-                } catch (pusherError) {
-                    console.error('[Webhook] Pusher error:', pusherError.message)
-                }
-            }
-        }
-
-        // Return success to Lark
-        return { code: 0, msg: 'ok' }
-    },
-
-    // Pusher: Get auth config for frontend
-    'GET /api/pusher/config': async () => {
-        return okResponse({
-            key: process.env.PUSHER_KEY || "YOUR_PUSHER_KEY",
-            cluster: process.env.PUSHER_CLUSTER || "ap1"
-        })
     },
 }
 

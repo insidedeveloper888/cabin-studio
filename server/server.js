@@ -4,22 +4,11 @@ const bodyParser = require('koa-bodyparser')
 const axios = require('axios')
 const CryptoJS = require('crypto-js')
 const session = require('koa-session');
-const Pusher = require('pusher')
 const serverConfig = require('./server_config')
 const serverUtil = require('./server_util')
 
 const LJ_JSTICKET_KEY = 'lk_jsticket'
 const LJ_TOKEN_KEY = 'lk_token'
-const LEADS_TABLE_ID = 'tblt9ruu9VqM0fWo'
-
-// Pusher configuration (use env vars in production)
-const pusher = new Pusher({
-    appId: process.env.PUSHER_APP_ID || "YOUR_PUSHER_APP_ID",
-    key: process.env.PUSHER_KEY || "YOUR_PUSHER_KEY",
-    secret: process.env.PUSHER_SECRET || "YOUR_PUSHER_SECRET",
-    cluster: process.env.PUSHER_CLUSTER || "ap1",
-    useTLS: true
-})
 
 //处理免登请求，返回用户的user_access_token
 async function getUserAccessToken(ctx) {
@@ -549,63 +538,6 @@ async function getOrgUsers(ctx) {
     console.log("-------------------[Get Org Users END]-----------------------------\n")
 }
 
-// Webhook handler for Lark events
-async function handleWebhook(ctx) {
-    console.log("\n-------------------[Webhook BEGIN]-----------------------------")
-    serverUtil.configAccessControl(ctx)
-
-    const body = ctx.request.body || {}
-    console.log("Webhook received:", JSON.stringify(body, null, 2))
-
-    // Handle URL verification challenge
-    if (body.type === 'url_verification') {
-        console.log("URL verification challenge")
-        ctx.body = { challenge: body.challenge }
-        console.log("-------------------[Webhook END]-----------------------------\n")
-        return
-    }
-
-    // Handle actual events
-    const event = body.event || {}
-    const header = body.header || {}
-    const eventType = header.event_type || body.type
-
-    console.log("Event type:", eventType)
-
-    // Handle Base record change events
-    if (eventType === 'drive.file.bitable_record_changed_v1') {
-        const tableId = event.table_id
-        const actionList = event.action_list || []
-
-        console.log("Base record changed, table:", tableId)
-
-        if (tableId === LEADS_TABLE_ID) {
-            try {
-                await pusher.trigger('leads-channel', 'record-changed', {
-                    table_id: tableId,
-                    actions: actionList,
-                    timestamp: Date.now()
-                })
-                console.log("Pusher event triggered")
-            } catch (err) {
-                console.error("Pusher error:", err.message)
-            }
-        }
-    }
-
-    ctx.body = { code: 0, msg: 'ok' }
-    console.log("-------------------[Webhook END]-----------------------------\n")
-}
-
-// Pusher config endpoint
-async function getPusherConfig(ctx) {
-    serverUtil.configAccessControl(ctx)
-    ctx.body = serverUtil.okResponse({
-        key: process.env.PUSHER_KEY || "YOUR_PUSHER_KEY",
-        cluster: process.env.PUSHER_CLUSTER || "ap1"
-    })
-}
-
 ///Start Sever
 const app = new Koa()
 const router = new Router();
@@ -649,8 +581,6 @@ router.delete('/api/base/record', deleteBaseRecord)
 router.post('/api/base/records/batch_delete', batchDeleteRecords)
 router.post('/api/message/send', sendMessage)
 router.get('/api/org/users', getOrgUsers)
-router.post('/api/webhook', handleWebhook)
-router.get('/api/pusher/config', getPusherConfig)
 var port = process.env.PORT || serverConfig.config.apiPort;
 app.use(router.routes()).use(router.allowedMethods());
 app.listen(port, () => {
