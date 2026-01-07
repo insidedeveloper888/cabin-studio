@@ -10,7 +10,7 @@ import './index.css'
 
 const BASE_ID = 'VNaub1YiNaMtBYsKhsol0mlNgnw'
 const TABLE_ID = 'tblt9ruu9VqM0fWo'
-const POLL_INTERVAL = 30000 // 30 seconds
+const POLL_INTERVAL = 30 // 30 seconds
 
 export default function Home() {
     const [userInfo, setUserInfo] = useState(null)
@@ -21,6 +21,7 @@ export default function Home() {
     const [leadsError, setLeadsError] = useState(null)
     const [selectedLead, setSelectedLead] = useState(null)
     const [autoSyncEnabled, setAutoSyncEnabled] = useState(true)
+    const [countdown, setCountdown] = useState(POLL_INTERVAL)
 
     const fetchLeads = useCallback(async (showLoading = true) => {
         if (showLoading) setLeadsLoading(true)
@@ -39,13 +40,21 @@ export default function Home() {
         if (showLoading) setLeadsLoading(false)
     }, [])
 
-    // Auto-refresh polling
+    // Auto-refresh polling with countdown
     useEffect(() => {
         if (!autoSyncEnabled || !userInfo) return
 
+        setCountdown(POLL_INTERVAL)
+
         const interval = setInterval(() => {
-            fetchLeads(false) // Silent refresh without loading spinner
-        }, POLL_INTERVAL)
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    fetchLeads(false) // Silent refresh without loading spinner
+                    return POLL_INTERVAL
+                }
+                return prev - 1
+            })
+        }, 1000)
 
         return () => clearInterval(interval)
     }, [autoSyncEnabled, userInfo, fetchLeads])
@@ -104,17 +113,17 @@ export default function Home() {
 
     return (
         <div className="home">
-            {/* Auto-sync indicator */}
+            {/* Auto-sync indicator with countdown */}
             {autoSyncEnabled && (
                 <div className="realtime-status connected" onClick={() => setAutoSyncEnabled(false)}>
                     <span className="status-dot"></span>
-                    Auto-sync (30s)
+                    Sync in {countdown}s
                 </div>
             )}
             {!autoSyncEnabled && (
                 <div className="realtime-status paused" onClick={() => setAutoSyncEnabled(true)}>
                     <span className="status-dot paused"></span>
-                    Sync paused - tap to resume
+                    Paused - tap to resume
                 </div>
             )}
             <UserInfo userInfo={userInfo} />
