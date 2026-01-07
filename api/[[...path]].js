@@ -86,13 +86,23 @@ const handlers = {
 
     // Auth: Get sign parameters
     'GET /api/get_sign_parameters': async (req) => {
-        const url = req.query.url || ''
+        // URL comes encoded from frontend, decode it for signature calculation
+        const encodedUrl = req.query.url || ''
+        const url = decodeURIComponent(encodedUrl)
+        console.log('[Sign] URL for signature:', url)
+
         const token = await getTenantAccessToken()
         const ticketRes = await axios.post("https://open.larksuite.com/open-apis/jssdk/ticket/get",
             {}, { headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token } }
         )
         if (ticketRes.data?.code !== 0) return failResponse(ticketRes.data?.msg)
-        return okResponse(calculateSignParam(ticketRes.data.data.ticket, url))
+
+        const signParam = calculateSignParam(ticketRes.data.data.ticket, url)
+        // Return with app_id field name that JSAPI expects
+        return okResponse({
+            ...signParam,
+            app_id: signParam.appId
+        })
     },
 
     // Base: Get records
