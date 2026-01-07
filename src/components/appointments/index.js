@@ -1,5 +1,23 @@
 import './index.css'
 
+// Status color mapping
+const getStatusStyle = (status) => {
+    switch (status) {
+        case 'Completed':
+            return { background: '#d1fae5', borderColor: '#10b981', color: '#059669' }
+        case 'Scheduled':
+            return { background: '#e0f2fe', borderColor: '#0ea5e9', color: '#0284c7' }
+        case 'In Progress':
+            return { background: '#ffedd5', borderColor: '#f97316', color: '#ea580c' }
+        case 'Treating':
+            return { background: '#f3e8ff', borderColor: '#a855f7', color: '#9333ea' }
+        case 'Cancelled':
+            return { background: '#fee2e2', borderColor: '#ef4444', color: '#dc2626' }
+        default:
+            return { background: '#f0f7ff', borderColor: '#3370ff', color: '#3370ff' }
+    }
+}
+
 function TodayAppointments({ leads }) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -46,6 +64,8 @@ function AppointmentCard({ lead }) {
     const endDate = fields['Appointment End Date']
     const location = fields['Customer house Location'] || '-'
     const sales = fields['Sales']?.[0]
+    const status = fields['Status'] || 'Scheduled'
+    const statusStyle = getStatusStyle(status)
 
     const formatTime = (timestamp) => {
         if (!timestamp) return '-'
@@ -58,14 +78,25 @@ function AppointmentCard({ lead }) {
     }
 
     return (
-        <div className="appointment-card">
-            <div className="appointment-time">
+        <div
+            className="appointment-card"
+            style={{
+                background: statusStyle.background,
+                borderLeftColor: statusStyle.borderColor
+            }}
+        >
+            <div className="appointment-time" style={{ borderRightColor: statusStyle.borderColor + '40' }}>
                 <span className="time-start">{formatTime(startDate)}</span>
                 <span className="time-separator">-</span>
                 <span className="time-end">{formatTime(endDate)}</span>
             </div>
             <div className="appointment-details">
-                <div className="appointment-name">{name}</div>
+                <div className="appointment-header">
+                    <span className="appointment-name">{name}</span>
+                    <span className="appointment-status" style={{ color: statusStyle.color }}>
+                        {status}
+                    </span>
+                </div>
                 <div className="appointment-info">
                     <span className="info-item">{contact}</span>
                     {location !== '-' && <span className="info-item">{location}</span>}
