@@ -1,0 +1,91 @@
+.leads-list {
+    padding: 0 20px 20px;
+}
+
+.leads-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2329;
+    margin: 0 0 16px 0;
+}
+
+.leads-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lead-card {
+    background: #fff;
+    border: 1px solid #e5e6eb;
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.lead-card:hover {
+    border-color: #3370ff;
+    box-shadow: 0 2px 8px rgba(51, 112, 255, 0.1);
+}
+
+.lead-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.lead-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2329;
+}
+
+.lead-grade {
+    font-size: 12px;
+    padding: 2px 8px;
+    background: #e8f3ff;
+    color: #3370ff;
+    border-radius: 4px;
+}
+
+.lead-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lead-row {
+    display: flex;
+    font-size: 14px;
+}
+
+.lead-label {
+    color: #8f959e;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.lead-value {
+    color: #1f2329;
+    word-break: break-word;
+}
+
+.lead-value.campaign {
+    font-size: 12px;
+    color: #646a73;
+}
+
+.leads-loading,
+.leads-error,
+.leads-empty {
+    padding: 40px 20px;
+    text-align: center;
+    font-size: 14px;
+    color: #646a73;
+}
+
+.leads-error {
+    color: #f54a45;
+}

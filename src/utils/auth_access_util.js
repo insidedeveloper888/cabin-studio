@@ -12,7 +12,7 @@ export async function handleJSAPIAccess(complete) {
     const url = encodeURIComponent(window.location.href.split("#")[0]);
     console.log("接入方前端[JSAPI鉴权处理]第① 步: 请求JSAPI鉴权参数")
     // 向接入方服务端发起请求，获取鉴权参数（appId、timestamp、nonceStr、signature）
-    const res = await axios.get(`${getOrigin(clientConfig.apiPort)}${clientConfig.getSignParametersPath}?url=${url}`,
+    const res = await axios.get(clientConfig.getApiUrl(`${clientConfig.getSignParametersPath}?url=${url}`),
         { withCredentials: true }
     )
     if (!res.data) {
@@ -116,7 +116,7 @@ function requestUserAccessToken(code, complete) {
 
     // 获取user_access_token信息
     console.log("接入方前端[免登处理]第② 步: 去接入方服务端获取user_access_token信息")
-    axios.get(`${getOrigin(clientConfig.apiPort)}${clientConfig.getUserAccessTokenPath}?code=${code}`,
+    axios.get(clientConfig.getApiUrl(`${clientConfig.getUserAccessTokenPath}?code=${code}`),
         { withCredentials: true }   //调用时设置 请求带上cookie
     ).then(function (response) {  // ignore_security_alert
         if (!response.data) {
@@ -142,11 +142,7 @@ function requestUserAccessToken(code, complete) {
     })
 }
 
-function getOrigin(apiPort) {
-    // console.log('process.env', process.env)
-    let hostname = window.location.hostname
-    return `http://${hostname}:${apiPort}`
-}
+// getOrigin removed - now using clientConfig.getApiUrl()
 
 
 

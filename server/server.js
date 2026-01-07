@@ -1,5 +1,6 @@
 const Koa = require('koa')
 const Router = require('koa-router')
+const bodyParser = require('koa-bodyparser')
 const axios = require('axios')
 const CryptoJS = require('crypto-js')
 const session = require('koa-session');
@@ -161,6 +162,382 @@ function calculateSignParam(tickeString, url) {
     return signParam
 }
 
+// Get tenant access token helper (CS Organization - for auth & messaging)
+async function getTenantAccessToken() {
+    const res = await axios.post("https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal", {
+        "app_id": serverConfig.config.appId,
+        "app_secret": serverConfig.config.appSecret
+    }, { headers: { "Content-Type": "application/json" } })
+
+    if (res.data && res.data.code === 0) {
+        return res.data.tenant_access_token
+    }
+    throw new Error(res.data?.msg || 'Failed to get tenant access token')
+}
+
+// Get Base app tenant access token (Cloud Organization - for Base operations)
+async function getBaseAppToken() {
+    const res = await axios.post("https://open.larksuite.com/open-apis/auth/v3/tenant_access_token/internal", {
+        "app_id": serverConfig.config.baseAppId,
+        "app_secret": serverConfig.config.baseAppSecret
+    }, { headers: { "Content-Type": "application/json" } })
+
+    if (res.data && res.data.code === 0) {
+        return res.data.tenant_access_token
+    }
+    throw new Error(res.data?.msg || 'Failed to get Base app access token')
+}
+
+// Fetch table fields/schema (uses Cloud org app)
+async function getTableFields(ctx) {
+    console.log("\n-------------------[Fetch Table Fields BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const baseId = ctx.query["base_id"] || ""
+    const tableId = ctx.query["table_id"] || ""
+
+    if (!baseId || !tableId) {
+        ctx.body = serverUtil.failResponse("base_id and table_id are required")
+        return
+    }
+
+    try {
+        const token = await getBaseAppToken()
+        const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${baseId}/tables/${tableId}/fields`
+
+        const res = await axios.get(url, {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        console.log("Table fields response:", JSON.stringify(res.data, null, 2))
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse(res.data.data)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to fetch fields')
+        }
+    } catch (error) {
+        ctx.body = serverUtil.failResponse(error.message)
+    }
+    console.log("-------------------[Fetch Table Fields END]-----------------------------\n")
+}
+
+// Fetch records from Base table (uses Cloud org app)
+async function getBaseRecords(ctx) {
+    console.log("\n-------------------[Fetch Base Records BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const baseId = ctx.query["base_id"] || ""
+    const tableId = ctx.query["table_id"] || ""
+    const pageToken = ctx.query["page_token"] || ""
+    const pageSize = ctx.query["page_size"] || "20"
+
+    if (!baseId || !tableId) {
+        ctx.body = serverUtil.failResponse("base_id and table_id are required")
+        return
+    }
+
+    try {
+        const token = await getBaseAppToken()  // Use Cloud org app
+        let url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${baseId}/tables/${tableId}/records?page_size=${pageSize}`
+        if (pageToken) {
+            url += `&page_token=${pageToken}`
+        }
+
+        const res = await axios.get(url, {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse(res.data.data)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to fetch records')
+        }
+    } catch (error) {
+        ctx.body = serverUtil.failResponse(error.message)
+    }
+    console.log("-------------------[Fetch Base Records END]-----------------------------\n")
+}
+
+// Update a record in Base table (uses Cloud org app)
+async function updateBaseRecord(ctx) {
+    console.log("\n-------------------[Update Base Record BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const { base_id, table_id, record_id, fields } = ctx.request.body || {}
+    console.log("Request body:", JSON.stringify(ctx.request.body, null, 2))
+
+    if (!base_id || !table_id || !record_id || !fields) {
+        ctx.body = serverUtil.failResponse("base_id, table_id, record_id, and fields are required")
+        return
+    }
+
+    try {
+        const token = await getBaseAppToken()
+        const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${base_id}/tables/${table_id}/records/${record_id}`
+
+        console.log("Sending to Lark API:", JSON.stringify({ fields }, null, 2))
+
+        const res = await axios.put(url, { fields }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        console.log("Lark API response:", JSON.stringify(res.data, null, 2))
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse(res.data.data)
+            console.log(`Record ${record_id} updated successfully`)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to update record')
+        }
+    } catch (error) {
+        console.error('Update error:', error.response?.data || error.message)
+        ctx.body = serverUtil.failResponse(error.response?.data?.msg || error.message)
+    }
+    console.log("-------------------[Update Base Record END]-----------------------------\n")
+}
+
+// Create a new record in Base table (uses Cloud org app)
+async function createBaseRecord(ctx) {
+    console.log("\n-------------------[Create Base Record BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const { base_id, table_id, fields } = ctx.request.body || {}
+    console.log("Request body:", JSON.stringify(ctx.request.body, null, 2))
+
+    if (!base_id || !table_id || !fields) {
+        ctx.body = serverUtil.failResponse("base_id, table_id, and fields are required")
+        return
+    }
+
+    try {
+        const token = await getBaseAppToken()
+        const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${base_id}/tables/${table_id}/records`
+
+        console.log("Sending to Lark API:", JSON.stringify({ fields }, null, 2))
+
+        const res = await axios.post(url, { fields }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        console.log("Lark API response:", JSON.stringify(res.data, null, 2))
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse(res.data.data)
+            console.log(`Record created successfully`)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to create record')
+        }
+    } catch (error) {
+        console.error('Create error:', error.response?.data || error.message)
+        ctx.body = serverUtil.failResponse(error.response?.data?.msg || error.message)
+    }
+    console.log("-------------------[Create Base Record END]-----------------------------\n")
+}
+
+// Delete a record from Base table (uses Cloud org app)
+async function deleteBaseRecord(ctx) {
+    console.log("\n-------------------[Delete Base Record BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const { base_id, table_id, record_id } = ctx.request.body || {}
+
+    if (!base_id || !table_id || !record_id) {
+        ctx.body = serverUtil.failResponse("base_id, table_id, and record_id are required")
+        return
+    }
+
+    try {
+        const token = await getBaseAppToken()
+        const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${base_id}/tables/${table_id}/records/${record_id}`
+
+        const res = await axios.delete(url, {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse({ deleted: true, record_id })
+            console.log(`Record ${record_id} deleted successfully`)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to delete record')
+        }
+    } catch (error) {
+        console.error('Delete error:', error.response?.data || error.message)
+        ctx.body = serverUtil.failResponse(error.response?.data?.msg || error.message)
+    }
+    console.log("-------------------[Delete Base Record END]-----------------------------\n")
+}
+
+// Batch delete records from Base table (uses Cloud org app)
+async function batchDeleteRecords(ctx) {
+    console.log("\n-------------------[Batch Delete Records BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const { base_id, table_id, records } = ctx.request.body || {}
+    console.log("Request body:", JSON.stringify(ctx.request.body, null, 2))
+
+    if (!base_id || !table_id || !records || !Array.isArray(records) || records.length === 0) {
+        ctx.body = serverUtil.failResponse("base_id, table_id, and records array are required")
+        return
+    }
+
+    try {
+        const token = await getBaseAppToken()
+        const url = `https://open.larksuite.com/open-apis/bitable/v1/apps/${base_id}/tables/${table_id}/records/batch_delete`
+
+        const res = await axios.post(url, { records }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        console.log("Lark API response:", JSON.stringify(res.data, null, 2))
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse({ deleted: true, count: records.length })
+            console.log(`${records.length} records deleted successfully`)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to batch delete records')
+        }
+    } catch (error) {
+        console.error('Batch delete error:', error.response?.data || error.message)
+        ctx.body = serverUtil.failResponse(error.response?.data?.msg || error.message)
+    }
+    console.log("-------------------[Batch Delete Records END]-----------------------------\n")
+}
+
+// Send message to user (uses CS org app for messaging)
+async function sendMessage(ctx) {
+    console.log("\n-------------------[Send Message BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    const { receive_id, receive_id_type, msg_type, content } = ctx.request.body || {}
+    console.log("Request body:", JSON.stringify(ctx.request.body, null, 2))
+
+    if (!receive_id || !msg_type || !content) {
+        ctx.body = serverUtil.failResponse("receive_id, msg_type, and content are required")
+        return
+    }
+
+    try {
+        // Use CS org app token for messaging
+        const token = await getTenantAccessToken()
+        const url = `https://open.larksuite.com/open-apis/im/v1/messages?receive_id_type=${receive_id_type || 'open_id'}`
+
+        // Format content based on msg_type
+        // Lark API requires content to be a JSON STRING for all message types
+        let formattedContent = content
+        if (msg_type === 'text' && typeof content === 'string') {
+            formattedContent = JSON.stringify({ text: content })
+        } else if (msg_type === 'interactive') {
+            // Interactive card - content MUST be a JSON string
+            // Parse first (if string) to validate, then stringify
+            const cardObj = typeof content === 'string' ? JSON.parse(content) : content
+            formattedContent = JSON.stringify(cardObj)
+        }
+
+        console.log("Sending to Lark:", { receive_id, msg_type, content: formattedContent })
+
+        const res = await axios.post(url, {
+            receive_id,
+            msg_type,
+            content: formattedContent
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        console.log("Lark API response:", JSON.stringify(res.data, null, 2))
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse(res.data.data)
+            console.log(`Message sent successfully`)
+        } else {
+            ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to send message')
+        }
+    } catch (error) {
+        console.error('Send message error:', error.response?.data || error.message)
+        ctx.body = serverUtil.failResponse(error.response?.data?.msg || error.message)
+    }
+    console.log("-------------------[Send Message END]-----------------------------\n")
+}
+
+// Get user list from CS org (for selecting message recipients)
+async function getOrgUsers(ctx) {
+    console.log("\n-------------------[Get Org Users BEGIN]-----------------------------")
+    serverUtil.configAccessControl(ctx)
+
+    try {
+        const token = await getTenantAccessToken()
+
+        // Method 1: Get users from root department (department_id=0)
+        // This requires scope: contact:user.base:readonly or contact:user.employee_id:readonly
+        const url = `https://open.larksuite.com/open-apis/contact/v3/users/find_by_department?department_id=0&page_size=50`
+
+        console.log("Fetching users from root department...")
+        const res = await axios.get(url, {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        })
+
+        console.log("Users response:", JSON.stringify(res.data, null, 2))
+
+        if (res.data && res.data.code === 0) {
+            ctx.body = serverUtil.okResponse(res.data.data)
+        } else {
+            // If find_by_department fails, try the scopes endpoint
+            console.log("Trying scopes endpoint...")
+            const scopesRes = await axios.get(
+                `https://open.larksuite.com/open-apis/contact/v3/scopes?page_size=50&user_id_type=open_id`,
+                { headers: { "Authorization": "Bearer " + token } }
+            )
+
+            console.log("Scopes response:", JSON.stringify(scopesRes.data, null, 2))
+
+            if (scopesRes.data?.code === 0 && scopesRes.data.data?.user_ids?.length > 0) {
+                // Get user details for each user_id
+                const userIds = scopesRes.data.data.user_ids
+                const usersData = await Promise.all(
+                    userIds.slice(0, 20).map(async (userId) => {
+                        try {
+                            const userRes = await axios.get(
+                                `https://open.larksuite.com/open-apis/contact/v3/users/${userId}?user_id_type=open_id`,
+                                { headers: { "Authorization": "Bearer " + token } }
+                            )
+                            return userRes.data?.data?.user
+                        } catch (e) {
+                            return null
+                        }
+                    })
+                )
+                ctx.body = serverUtil.okResponse({ items: usersData.filter(Boolean) })
+            } else {
+                ctx.body = serverUtil.failResponse(res.data?.msg || 'Failed to get users. Check app scopes.')
+            }
+        }
+    } catch (error) {
+        console.error('Get users error:', error.response?.data || error.message)
+        ctx.body = serverUtil.failResponse(error.response?.data?.msg || error.message)
+    }
+    console.log("-------------------[Get Org Users END]-----------------------------\n")
+}
+
 ///Start Sever
 const app = new Koa()
 const router = new Router();
@@ -177,11 +554,33 @@ const koaSessionConfig = {
     renew: false, /** (boolean) renew session when session is nearly expired      【需要修改】*/
 };
 app.use(session(koaSessionConfig, app));
+app.use(bodyParser());
 
+// CORS middleware - handle preflight OPTIONS requests
+app.use(async (ctx, next) => {
+    ctx.set("Access-Control-Allow-Origin", ctx.headers.origin || "*");
+    ctx.set("Access-Control-Allow-Methods", "OPTIONS, GET, PUT, POST, DELETE");
+    ctx.set("Access-Control-Allow-Credentials", "true");
+    ctx.set("Access-Control-Allow-Headers", "x-requested-with, accept, origin, content-type");
+
+    if (ctx.method === 'OPTIONS') {
+        ctx.status = 204;
+        return;
+    }
+    await next();
+});
 
 //注册服务端路由和处理
 router.get(serverConfig.config.getUserAccessTokenPath, getUserAccessToken)
 router.get(serverConfig.config.getSignParametersPath, getSignParameters)
+router.get('/api/base/fields', getTableFields)
+router.get('/api/base/records', getBaseRecords)
+router.post('/api/base/record', createBaseRecord)
+router.put('/api/base/record', updateBaseRecord)
+router.delete('/api/base/record', deleteBaseRecord)
+router.post('/api/base/records/batch_delete', batchDeleteRecords)
+router.post('/api/message/send', sendMessage)
+router.get('/api/org/users', getOrgUsers)
 var port = process.env.PORT || serverConfig.config.apiPort;
 app.use(router.routes()).use(router.allowedMethods());
 app.listen(port, () => {
