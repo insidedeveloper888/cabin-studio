@@ -1,0 +1,88 @@
+.data-table-container {
+    overflow-x: auto;
+    background: #fff;
+}
+
+.data-table-loading {
+    padding: 40px;
+    text-align: center;
+    font-size: 14px;
+    color: #646a73;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table th {
+    position: sticky;
+    top: 0;
+    background: #f5f6f7;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 500;
+    color: #646a73;
+    border-bottom: 1px solid #e5e6eb;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.data-table th.sortable {
+    cursor: pointer;
+}
+
+.data-table th.sortable:hover {
+    background: #e5e6eb;
+}
+
+.data-table .th-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.data-table .sort-indicator {
+    font-size: 10px;
+    color: #3370ff;
+}
+
+.data-table td {
+    padding: 12px 16px;
+    color: #1f2329;
+    border-bottom: 1px solid #e5e6eb;
+    vertical-align: top;
+}
+
+.data-table tbody tr.clickable {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.data-table tbody tr.clickable:hover {
+    background: #f5f6f7;
+}
+
+.data-table .empty-row {
+    text-align: center;
+    color: #646a73;
+    padding: 40px 16px;
+}
+
+/* Utility classes for columns */
+.data-table .cell-truncate {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.data-table .cell-bold {
+    font-weight: 500;
+}
+
+.data-table .cell-wrap {
+    white-space: normal;
+    word-break: break-word;
+}

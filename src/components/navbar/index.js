@@ -7,13 +7,13 @@ function Navbar() {
             <div className="nav-brand">Cabin Studio</div>
             <div className="nav-links">
                 <NavLink to="/" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                    Home
+                </NavLink>
+                <NavLink to="/leads" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                     Leads
                 </NavLink>
-                <NavLink to="/test" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    Test Table
-                </NavLink>
-                <NavLink to="/messaging" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    Messaging
+                <NavLink to="/projects" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                    Projects
                 </NavLink>
             </div>
         </nav>

@@ -1,0 +1,266 @@
+.work-order-modal {
+    max-width: 700px;
+}
+
+.work-order-modal .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Form sections */
+.form-section {
+    margin-bottom: 24px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2329;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e6eb;
+}
+
+.section-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1f2329;
+    margin-bottom: 6px;
+}
+
+.form-group label .required {
+    color: #f54a45;
+    margin-left: 2px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 12px;
+    border: 1px solid #d0d3d6;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1f2329;
+    background: #fff;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3370ff;
+    box-shadow: 0 0 0 2px rgba(51, 112, 255, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group select {
+    cursor: pointer;
+}
+
+/* Modal styles - ensure consistency */
+.work-order-modal .modal-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.work-order-modal .spacer {
+    flex: 1;
+}
+
+.btn-delete {
+    padding: 10px 16px;
+    background: #fff;
+    color: #f54a45;
+    border: 1px solid #f54a45;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-delete:hover {
+    background: #fef0f0;
+}
+
+.delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.delete-confirm span {
+    color: #f54a45;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.btn-delete-confirm {
+    padding: 10px 16px;
+    background: #f54a45;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-delete-confirm:hover {
+    background: #dc2626;
+}
+
+.btn-delete-confirm:disabled {
+    background: #fca5a5;
+    cursor: not-allowed;
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-cancel {
+    background: #f5f6f7;
+    color: #1f2329;
+}
+
+.btn-cancel:hover {
+    background: #e5e6eb;
+}
+
+.btn-save {
+    background: #3370ff;
+    color: #fff;
+}
+
+.btn-save:hover {
+    background: #2860e1;
+}
+
+.btn-save:disabled {
+    background: #a0bfff;
+    cursor: not-allowed;
+}
+
+/* Modal base styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e6eb;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2329;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #8f959e;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #1f2329;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-error {
+    background: #fef0f0;
+    color: #f54a45;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #e5e6eb;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .section-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .work-order-modal .modal-body {
+        max-height: 50vh;
+    }
+}

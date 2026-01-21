@@ -1,0 +1,55 @@
+.view-toggle {
+    display: flex;
+    background: #f5f6f7;
+    border-radius: 8px;
+    padding: 4px;
+    gap: 4px;
+}
+
+.view-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #646a73;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-toggle-btn:hover {
+    color: #1f2329;
+    background: #e5e6eb;
+}
+
+.view-toggle-btn.active {
+    background: #fff;
+    color: #3370ff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-icon {
+    font-size: 14px;
+}
+
+.view-label {
+    display: inline;
+}
+
+@media (max-width: 480px) {
+    .view-label {
+        display: none;
+    }
+
+    .view-toggle-btn {
+        padding: 8px 12px;
+    }
+
+    .view-icon {
+        font-size: 16px;
+    }
+}
